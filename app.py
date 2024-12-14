@@ -8,6 +8,12 @@ import streamlit as st
 import requests
 import cv2
 
+st.set_page_config(
+    page_title='Computer-aid ROP Program',
+    page_icon='./static/Taipei_Tech_Logo.jpg',
+    layout='wide'
+)
+
 def read_file_as_image(data) -> np.ndarray:
     """Read uploaded file data as a NumPy array."""
     image = np.array(Image.open(BytesIO(data)))
@@ -34,26 +40,49 @@ def draw_bounding_boxes(image, bounding_boxes):
         cv2.putText(image, text, (x1, y1 - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), font_thickness)
     return image
 
-def main():
-    st.set_page_config(
-        page_title='Computer-aid ROP Program',
-        page_icon='./static/Taipei_Tech_Logo.jpg',
-        layout='wide'
+
+# Initialize the session state for the backend URL
+if "img_flask_api_url" not in st.session_state:
+    st.session_state.img_flask_api_url = None
+
+# @st.dialog("Setup Back end")
+def vote():
+    st.markdown(
+        """
+        Run the backend [here](https://colab.research.google.com/drive/125JxHsVRrKUQUMOA3h9knlUiuM7OBYlk?usp=sharing) and paste the Ngrok link below.
+        """
     )
+    link = st.text_input("Backend URL", "")
+    if st.button("Save"):
+        st.session_state.img_flask_api_url = "{}/OpticDisc-segmentation".format(link)  # Update ngrok URL
+        st.rerun()  # Re-run the app to close the dialog
+
+# Display the dialog only if the URL is not set
+if st.session_state.img_flask_api_url is None:
+    vote()
+
+# Once the URL is set, display it or proceed with other functionality
+if st.session_state.img_flask_api_url:
+    st.write(f"Backend is set to: {st.session_state.img_flask_api_url}")
+
+
+
+def main():
+
 
     st.title("ROP-diagnosis Program")
     # session_id = str(uuid.uuid4())
 
+
+
     # Backend API URL
-    if "img_flask_api_url" not in st.session_state:
-        st.session_state.img_flask_api_url = 'https://4c45-104-199-247-71.ngrok-free.app/OpticDisc-segmentation'
+    # if "img_flask_api_url" not in st.session_state:
+    #     st.session_state.img_flask_api_url = 'https://4c45-104-199-247-71.ngrok-free.app/OpticDisc-segmentation'
     
     uploaded_img = st.file_uploader('__Input your image__', type=['jpg', 'jpeg', 'png'])
     example_button = st.button('Run diagnosis')
     
-    image_bytes = uploaded_img.read()
-    uploaded_img.seek(0)
-    image = read_file_as_image(image_bytes)
+
     # print(type(image))
     # print(image.shape)
 
@@ -62,6 +91,9 @@ def main():
 
     if uploaded_img and example_button:
 
+        image_bytes = uploaded_img.read()
+        uploaded_img.seek(0)
+        image = read_file_as_image(image_bytes)
         # Send the POST request to the Flask API
         files = {'image': uploaded_img}
         # print(f"Uploaded image type: {type(uploaded_img)}")
